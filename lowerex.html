@@ -275,7 +275,76 @@
       .input-area {
         width: 100%;
       }
-    }
+    @media (max-width: 480px) {
+  body {
+    height: auto;
+    overflow: auto;
+  }
+
+  main {
+    flex-direction: column;
+    padding: 16px;
+    gap: 16px;
+    height: auto;
+  }
+
+  .input-area {
+    flex: none;
+    width: 100%;
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .input-area h2 {
+    font-size: 1.4rem;
+  }
+
+  #search,
+  #note,
+  #image {
+    font-size: 14px;
+    padding: 10px;
+  }
+
+  #note {
+    min-height: 200px;
+  }
+
+  button {
+    width: 100%;
+    padding: 12px;
+    font-size: 15px;
+    border-radius: 24px;
+  }
+
+  #notes {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .note-card {
+    padding: 14px;
+    font-size: 14px;
+  }
+
+  .note-image.zoomed {
+    max-width: 95vw;
+    max-height: 85vh;
+  }
+
+  .card-controls {
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-start;
+  }
+
+  .btn {
+    font-size: 13px;
+    padding: 6px 12px;
+    flex: 1 1 auto;
+  }
+}
+
   </style>
 </head>
 <body>
