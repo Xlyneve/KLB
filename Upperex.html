@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Upper Extremities Notes</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f5f4f1;
+      color: #484542;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    main {
+      display: flex;
+      gap: 20px;
+      padding: 20px;
+      flex: 1;
+      overflow: hidden;
+    }
+    .input-area {
+      width: 28%;
+      background: #fbfaf8;
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 4px 12px rgba(172, 165, 152, 0.15);
+    }
+    .input-area h2 {
+      margin: 0;
+      font-size: 1.6rem;
+      text-align: center;
+      color: #726e68;
+    }
+    #search, #note, input[type="file"] {
+      width: 100%;
+      font-size: 14px;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #d4cec7;
+      background: #ffffff;
+    }
+    #note {
+      resize: vertical;
+      min-height: 300px;
+    }
+    button#save-note {
+      background: #d6cfc2;
+      color: #403d39;
+      padding: 10px 20px;
+      border-radius: 25px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      align-self: flex-end;
+    }
+    #notes {
+      flex: 1;
+      overflow-y: auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    article.note-card {
+      background: #fffefa;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      display: flex;
+      flex-direction: column;
+    }
+    .note-image {
+      max-height: 180px;
+      object-fit: contain;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      cursor: zoom-in;
+    }
+    .note-image.zoomed {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      max-width: 90vw; max-height: 90vh;
+      z-index: 999;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.3);
+      cursor: zoom-out;
+    }
+    .card-controls {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .btn {
+      font-size: 12px;
+      padding: 4px 10px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      cursor: pointer;
+      color: #726e68;
+    }
+    .btn:hover {
+      background: #e6e2db;
+    }
+    .edit-textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 12px;
+      font-size: 14px;
+      border-radius: 10px;
+      border: 1px solid #d4cec7;
+      background: #fefdfb;
+    }
+    .edit-toolbar {
+      display: flex;
+      gap: 10px;
+      margin: 6px 0;
+    }
+    .edit-toolbar button {
+      font-size: 14px;
+      border: none;
+      background: #eae5dc;
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <section class="input-area">
+    <h2>Upper Extremities</h2>
+    <input id="search" type="search" placeholder="Search notes..." oninput="searchNotes()" />
+    <textarea id="note" placeholder="Write your note here..."></textarea>
+    <input type="file" id="image" accept="image/*" />
+    <button id="save-note" onclick="saveNote()">Save Note</button>
+  </section>
+
+  <section id="notes"></section>
+</main>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+  import {
+    getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc
+  } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+  apiKey: "AIzaSyAwITicGVF5_Vxw6Bwf9n1AaQom-76M2IE",
+  authDomain: "krissa-d5a9c.firebaseapp.com",
+  projectId: "krissa-d5a9c",
+  storageBucket: "krissa-d5a9c.firebasestorage.app",
+  messagingSenderId: "550249186610",
+  appId: "1:550249186610:web:5ee5b585ac686021be432b",
+  measurementId: "G-D7KBRWFETT"
+};
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const notesCollection = collection(db, "upper-extremity-notes");
+
+  function formatNote(text) {
+    return text.replace(/\n/g, "<br>");
+  }
+
+  async function saveNote() {
+    const noteText = document.getElementById("note").value.trim();
+    const imageFile = document.getElementById("image").files[0];
+    if (!noteText && !imageFile) return;
+
+    let imageData = "";
+    if (imageFile) {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        imageData = reader.result;
+        await addDoc(notesCollection, { note: noteText, image: imageData });
+        document.getElementById("note").value = "";
+        document.getElementById("image").value = "";
+        loadNotes();
+      };
+      reader.readAsDataURL(imageFile);
+    } else {
+      await addDoc(notesCollection, { note: noteText, image: "" });
+      document.getElementById("note").value = "";
+      loadNotes();
+    }
+  }
+
+  async function loadNotes(filter = "") {
+    const notesContainer = document.getElementById("notes");
+    notesContainer.innerHTML = "";
+    const querySnapshot = await getDocs(notesCollection);
+    querySnapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (filter && !data.note.toLowerCase().includes(filter.toLowerCase())) return;
+
+      const card = document.createElement("article");
+      card.className = "note-card";
+
+      if (data.image) {
+        const img = document.createElement("img");
+        img.src = data.image;
+        img.className = "note-image";
+        img.onclick = () => img.classList.toggle("zoomed");
+        card.appendChild(img);
+      }
+
+      const content = document.createElement("div");
+      content.innerHTML = formatNote(data.note);
+      card.appendChild(content);
+
+      const controls = document.createElement("nav");
+      controls.className = "card-controls";
+
+      const editBtn = document.createElement("button");
+      editBtn.className = "btn";
+      editBtn.textContent = "Edit";
+      editBtn.onclick = () => {
+        content.style.display = "none";
+
+        const textarea = document.createElement("div");
+        textarea.contentEditable = true;
+        textarea.className = "edit-textarea";
+        textarea.innerHTML = data.note;
+
+        const toolbar = document.createElement("div");
+        toolbar.className = "edit-toolbar";
+
+        const boldBtn = document.createElement("button");
+        boldBtn.textContent = "B";
+        boldBtn.onclick = () => document.execCommand("bold");
+
+        const underlineBtn = document.createElement("button");
+        underlineBtn.textContent = "U";
+        underlineBtn.onclick = () => document.execCommand("underline");
+
+        toolbar.appendChild(boldBtn);
+        toolbar.appendChild(underlineBtn);
+
+        const saveBtn = document.createElement("button");
+        saveBtn.className = "btn";
+        saveBtn.textContent = "Save";
+        saveBtn.onclick = async () => {
+          await updateDoc(doc(notesCollection, docSnap.id), {
+            note: textarea.innerHTML
+          });
+          loadNotes();
+        };
+
+        const cancelBtn = document.createElement("button");
+        cancelBtn.className = "btn";
+        cancelBtn.textContent = "Cancel";
+        cancelBtn.onclick = () => loadNotes();
+
+        card.insertBefore(textarea, controls);
+        card.insertBefore(toolbar, textarea);
+        controls.appendChild(saveBtn);
+        controls.appendChild(cancelBtn);
+      };
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn";
+      delBtn.textContent = "Delete";
+      delBtn.onclick = async () => {
+        await deleteDoc(doc(notesCollection, docSnap.id));
+        loadNotes();
+      };
+
+      controls.appendChild(editBtn);
+      controls.appendChild(delBtn);
+      card.appendChild(controls);
+      notesContainer.appendChild(card);
+    });
+  }
+
+  window.saveNote = saveNote;
+  window.searchNotes = () => {
+    const val = document.getElementById("search").value;
+    loadNotes(val);
+  };
+  window.onload = () => loadNotes();
+</script>
+</body>
+</html>

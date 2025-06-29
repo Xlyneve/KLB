@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Thorax Notes</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import {
+      getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc
+    } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAwITicGVF5_Vxw6Bwf9n1AaQom-76M2IE",
+      authDomain: "krissa-d5a9c.firebaseapp.com",
+      projectId: "krissa-d5a9c",
+      storageBucket: "krissa-d5a9c.appspot.com",
+      messagingSenderId: "550249186610",
+      appId: "1:550249186610:web:5ee5b585ac686021be432b",
+      measurementId: "G-D7KBRWFETT"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const notesCollection = collection(db, "thorax");
+
+    function loadNotes(filter = "") {
+      const notesContainer = document.getElementById("notes");
+
+      onSnapshot(notesCollection, (snapshot) => {
+        notesContainer.innerHTML = "";
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          if (filter && !data.note?.toLowerCase().includes(filter.toLowerCase())) return;
+
+          const card = document.createElement("article");
+          card.className = "note-card";
+
+          if (data.image) {
+            const img = document.createElement("img");
+            img.src = data.image;
+            img.className = "note-image";
+            img.onclick = () => img.classList.toggle("zoomed");
+            card.appendChild(img);
+          }
+
+          const content = document.createElement("div");
+          content.className = "note-text";
+          content.contentEditable = false;
+          content.innerHTML = data.note;
+          card.appendChild(content);
+
+          const controls = document.createElement("div");
+          controls.className = "card-controls";
+
+          const boldBtn = document.createElement("button");
+          boldBtn.textContent = "B";
+          boldBtn.className = "btn format-btn hidden";
+          boldBtn.onclick = () => document.execCommand("bold");
+
+          const underlineBtn = document.createElement("button");
+          underlineBtn.textContent = "U";
+          underlineBtn.className = "btn format-btn hidden";
+          underlineBtn.onclick = () => document.execCommand("underline");
+
+          const editBtn = document.createElement("button");
+          editBtn.className = "btn edit-btn";
+          editBtn.textContent = "Edit";
+
+          const saveBtn = document.createElement("button");
+          saveBtn.className = "btn save-btn hidden";
+          saveBtn.textContent = "Save";
+
+          const cancelBtn = document.createElement("button");
+          cancelBtn.className = "btn cancel-btn hidden";
+          cancelBtn.textContent = "Cancel";
+
+          const deleteBtn = document.createElement("button");
+          deleteBtn.className = "btn delete-btn";
+          deleteBtn.textContent = "Delete";
+
+          editBtn.onclick = () => {
+            content.contentEditable = true;
+            content.focus();
+            editBtn.classList.add("hidden");
+            saveBtn.classList.remove("hidden");
+            cancelBtn.classList.remove("hidden");
+            boldBtn.classList.remove("hidden");
+            underlineBtn.classList.remove("hidden");
+          };
+
+          saveBtn.onclick = async () => {
+            await updateDoc(doc(notesCollection, docSnap.id), {
+              note: content.innerHTML
+            });
+            content.contentEditable = false;
+            editBtn.classList.remove("hidden");
+            saveBtn.classList.add("hidden");
+            cancelBtn.classList.add("hidden");
+            boldBtn.classList.add("hidden");
+            underlineBtn.classList.add("hidden");
+          };
+
+          cancelBtn.onclick = () => loadNotes(filter);
+
+          deleteBtn.onclick = async () => {
+            await deleteDoc(doc(notesCollection, docSnap.id));
+          };
+
+          controls.append(boldBtn, underlineBtn, editBtn, saveBtn, cancelBtn, deleteBtn);
+          card.appendChild(controls);
+          notesContainer.appendChild(card);
+        });
+      });
+    }
+
+    async function saveNote() {
+      const textEl = document.getElementById("note");
+      const imageEl = document.getElementById("image");
+      const text = textEl.innerHTML.trim();
+      const file = imageEl.files[0];
+      if (!text && !file) return;
+
+      if (file) {
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          await addDoc(notesCollection, { note: text, image: reader.result });
+          textEl.innerHTML = "";
+          imageEl.value = "";
+        };
+        reader.readAsDataURL(file);
+      } else {
+        await addDoc(notesCollection, { note: text, image: "" });
+        textEl.innerHTML = "";
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadNotes();
+    });
+
+    window.saveNote = saveNote;
+    window.searchNotes = () => {
+      const query = document.getElementById("search").value;
+      loadNotes(query);
+    };
+  </script>
+
+  <style>
+    :root {
+      --accent-color: #8b6d5c;
+      --background-light: #f9f4f1;
+      --background-dark: #5e4b3c;
+      --text-color: #3d2f25;
+      --button-bg: #f1ece6;
+      --button-hover-bg: #e5dcd3;
+      --input-bg: #fff7f0;
+      --shadow-color: rgba(160,130,100,0.2);
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--background-light);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    main {
+      display: flex;
+      gap: 20px;
+      padding: 20px;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .input-area {
+      flex: 0 0 30%;
+      background: var(--input-bg);
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 4px 10px var(--shadow-color);
+    }
+
+    .input-area h2 {
+      text-align: center;
+      color: var(--accent-color);
+      margin: 0 0 10px;
+      font-weight: 700;
+    }
+
+    #search {
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1.5px solid #cbb79a;
+      background: #fff3e8;
+      font-size: 14px;
+      color: var(--text-color);
+    }
+
+    #note {
+      padding: 14px;
+      min-height: 300px;
+      border: 1.5px solid #d8bfa9;
+      background: #fff5ec;
+      border-radius: 14px;
+      outline: none;
+      overflow-y: auto;
+      color: var(--text-color);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    #image {
+      margin-top: 10px;
+    }
+
+    .btn {
+  background: transparent;
+  color: var(--background-dark);
+  border: 1px solid var(--button-bg);
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+
+.btn:hover {
+  background: var(--button-hover-bg);
+  color: white;
+}
+
+
+    .hidden {
+      display: none;
+    }
+
+    #notes {
+      flex: 1;
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      overflow-y: auto;
+    }
+
+    .note-card {
+      background: #fff8f1;
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 4px 12px rgba(139, 109, 92, 0.15);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .note-image {
+      max-width: 100%;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      cursor: zoom-in;
+    }
+
+    .note-image.zoomed {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      max-width: 90vw;
+      max-height: 90vh;
+      z-index: 1000;
+      box-shadow: 0 8px 24px rgba(139, 109, 92, 0.5);
+    }
+
+    .note-text {
+      flex: 1;
+      font-size: 15px;
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+
+    .card-controls {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+
+    @media (max-width: 768px) {
+      main {
+        flex-direction: column;
+      }
+      .input-area {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="input-area">
+      <h2>Thorax</h2>
+      <input type="search" id="search" placeholder="Search notes..." oninput="searchNotes()" />
+      <div id="note" contenteditable="true" placeholder="Write your note here..."></div>
+      <input type="file" id="image" accept="image/*" />
+      <button class="btn" onclick="saveNote()">Save Note</button>
+    </section>
+    <section id="notes"></section>
+  </main>
+</body>
+</html>

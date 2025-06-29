@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HEAD KLB</title>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+  import {
+    getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc
+  } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAwITicGVF5_Vxw6Bwf9n1AaQom-76M2IE",
+    authDomain: "krissa-d5a9c.firebaseapp.com",
+    projectId: "krissa-d5a9c",
+    storageBucket: "krissa-d5a9c.appspot.com",
+    messagingSenderId: "550249186610",
+    appId: "1:550249186610:web:5ee5b585ac686021be432b",
+    measurementId: "G-D7KBRWFETT"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const notesCollection = collection(db, "notes");
+
+  // Convert markdown-like syntax to HTML before saving new notes
+  function formatNote(text) {
+    const escaped = text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+    return escaped
+      .replace(/\n/g, "<br>")
+      .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+      .replace(/==(.+?)==/g, '<span style="background-color:#f2e8dc">$1</span>');
+  }
+
+  async function saveNote() {
+    let noteText = document.getElementById("note").value.trim();
+    const imageFile = document.getElementById("image").files[0];
+    if (!noteText && !imageFile) return;
+
+    // Convert markdown syntax to HTML before saving
+    noteText = formatNote(noteText);
+
+    let imageData = "";
+    if (imageFile) {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        imageData = reader.result;
+        await addDoc(notesCollection, { note: noteText, image: imageData });
+        document.getElementById("note").value = "";
+        document.getElementById("image").value = "";
+        loadNotes();
+      };
+      reader.readAsDataURL(imageFile);
+    } else {
+      await addDoc(notesCollection, { note: noteText, image: "" });
+      document.getElementById("note").value = "";
+      loadNotes();
+    }
+  }
+
+  async function loadNotes(filter = "") {
+    const notesContainer = document.getElementById("notes");
+    notesContainer.innerHTML = "";
+    const querySnapshot = await getDocs(notesCollection);
+    querySnapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (filter && !data.note?.toLowerCase().trim().includes(filter.toLowerCase().trim())) return;
+
+      const card = document.createElement("article");
+      card.className = "note-card";
+
+      if (data.image) {
+        const img = document.createElement("img");
+        img.src = data.image;
+        img.alt = "Note Image";
+        img.className = "note-image";
+        img.addEventListener("click", () => img.classList.toggle("zoomed"));
+        card.appendChild(img);
+      }
+
+      const p = document.createElement("p");
+      p.className = "note-text";
+      // Render saved HTML directly
+      p.innerHTML = data.note || "";
+      p.contentEditable = false;
+      card.appendChild(p);
+
+      const controls = document.createElement("nav");
+      controls.className = "card-controls";
+
+      // Bold button (hidden initially)
+      const boldBtn = document.createElement("button");
+      boldBtn.className = "btn format-btn";
+      boldBtn.textContent = "B";
+      boldBtn.title = "Bold";
+      boldBtn.style.display = "none";
+      boldBtn.onclick = () => {
+        if (p.contentEditable === "true") {
+          document.execCommand('bold');
+          p.focus();
+        }
+      };
+      controls.appendChild(boldBtn);
+
+      // Underline button (hidden initially)
+      const underlineBtn = document.createElement("button");
+      underlineBtn.className = "btn format-btn";
+      underlineBtn.textContent = "U";
+      underlineBtn.title = "Underline";
+      underlineBtn.style.display = "none";
+      underlineBtn.onclick = () => {
+        if (p.contentEditable === "true") {
+          document.execCommand('underline');
+          p.focus();
+        }
+      };
+      controls.appendChild(underlineBtn);
+
+      // Edit button
+      const editBtn = document.createElement("button");
+      editBtn.className = "btn edit-btn";
+      editBtn.textContent = "Edit";
+      editBtn.onclick = () => {
+        if (p.contentEditable === "false") {
+          // Enter edit mode
+          p.contentEditable = "true";
+          p.focus();
+          editBtn.textContent = "Save";
+          cancelBtn.style.display = "inline-block";
+          // Show formatting buttons
+          boldBtn.style.display = "inline-block";
+          underlineBtn.style.display = "inline-block";
+        } else {
+          // Save mode
+          const updatedNote = p.innerHTML.trim();
+          if (!updatedNote) {
+            alert("Note cannot be empty.");
+            return;
+          }
+          updateDoc(doc(notesCollection, docSnap.id), { note: updatedNote })
+            .then(() => {
+              p.contentEditable = "false";
+              editBtn.textContent = "Edit";
+              cancelBtn.style.display = "none";
+              boldBtn.style.display = "none";
+              underlineBtn.style.display = "none";
+              loadNotes(filter);
+            });
+        }
+      };
+      controls.appendChild(editBtn);
+
+      // Cancel button
+      const cancelBtn = document.createElement("button");
+      cancelBtn.className = "btn cancel-btn";
+      cancelBtn.textContent = "Cancel";
+      cancelBtn.style.display = "none";
+      cancelBtn.onclick = () => {
+        loadNotes(filter);
+      };
+      controls.appendChild(cancelBtn);
+
+      // Delete button
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn del-btn";
+      delBtn.textContent = "Delete";
+      delBtn.onclick = async () => {
+        await deleteDoc(doc(notesCollection, docSnap.id));
+        loadNotes(filter);
+      };
+      controls.appendChild(delBtn);
+
+      card.appendChild(controls);
+
+      notesContainer.appendChild(card);
+    });
+  }
+
+  window.saveNote = saveNote;
+  window.loadNotes = loadNotes;
+
+  window.onload = () => loadNotes();
+
+  window.searchNotes = () => {
+    const searchVal = document.getElementById("search").value;
+    loadNotes(searchVal);
+  };
+</script>
+
+<style>
+  /* Reset and basics */
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    margin: 0; 
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f5f4f1;
+    color: #484542;
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  main {
+    flex: 1 1 auto;
+    display: flex;
+    gap: 20px;
+    padding: 10px 20px;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100vh; /* full height */
+    align-items: flex-start;
+  }
+
+  .input-area {
+    flex: 0 0 28%;
+    background: #fbfaf8;
+    border-radius: 20px;
+    box-shadow: 0 4px 12px rgb(172 165 152 / 0.15);
+    padding: 18px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 550px;
+    overflow-y: auto;
+  }
+
+  .input-area h2 {
+    margin: 0 0 6px 0;
+    color: #726e68;
+    font-weight: 800;
+    font-size: 1.8rem;
+    text-align: center;
+  }
+
+  #search {
+    width: 100%;
+    padding: 10px 18px;
+    border-radius: 14px;
+    border: 1.7px solid #d4cec7;
+    background: #fbfaf8;
+    font-size: 15px;
+    color: #726e68;
+    transition: border-color 0.3s ease;
+  }
+  #search:focus {
+    border-color: #9f9b94;
+    outline: none;
+    background: #fff;
+  }
+
+  textarea#note {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 18px 22px;
+    border-radius: 15px;
+    border: 1.6px solid #d4cec7;
+    resize: vertical;
+    min-height: 460px;
+    max-height: 540px;
+    background: #fffefa;
+    color: #5a5853;
+    transition: border-color 0.3s ease;
+    box-sizing: border-box;
+    flex-grow: 1; 
+  }
+  textarea#note:focus {
+    outline: none;
+    border-color: #a3a09a;
+    background: #fff;
+  }
+
+  input[type="file"] {
+    font-size: 12px;
+    color: #726e68;
+    border-radius: 18px;
+    padding: 14px 18px;
+    border: 1.6px solid #d4cec7;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+    box-sizing: border-box;
+    margin-top: 8px;
+  }
+  input[type="file"]:hover {
+    border-color: #a3a09a;
+  }
+
+  button#save-note {
+    align-self: flex-end;
+    background: #cdc5b7;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 32px;
+    font-weight: 600;
+    font-size: 16px;
+    color: #5a5853;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgb(205 197 183 / 0.5);
+    transition: background 0.3s ease;
+    margin-top: 6px;
+  }
+  button#save-note:hover {
+    background: #b0a895;
+    color: #403d39;
+  }
+
+  #notes {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    align-content: start;
+    overflow-y: auto;
+    max-height: 100%;
+    padding: 0;
+    margin: 0;
+  }
+
+  article.note-card {
+    background: #fffefa;
+    box-shadow: 0 4px 16px rgb(172 165 152 / 0.18);
+    border-radius: 24px;
+    padding: 24px 24px 30px 24px;
+    color: #5a5853;
+    font-size: 14px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    min-height: unset;
+  }
+
+  p.note-text {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 14px;
+    line-height: 1.5;
+    outline: none;
+  }
+
+  .note-image {
+    width: 100%;
+    max-height: 180px;
+    border-radius: 18px;
+    object-fit: contain;
+    margin-bottom: 18px;
+    cursor: zoom-in;
+    user-select: none;
+    transition: box-shadow 0.3s ease;
+    box-sizing: border-box;
+    display: block;
+  }
+  .note-image:hover {
+    box-shadow: 0 0 12px rgb(123 116 105 / 0.35);
+  }
+  .note-image.zoomed {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 90vw;
+    max-height: 90vh;
+    width: auto;
+    height: auto;
+    z-index: 1100;
+    box-shadow: 0 0 20px rgb(123 116 105 / 0.6);
+    background: #fffcf7;
+    border-radius: 28px;
+    cursor: zoom-out;
+  }
+
+  .card-controls {
+    margin-top: 16px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  button.btn {
+    border: none;
+    border-radius: 12px;
+    background: transparent;
+    color: #726e68;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 4px 10px;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.3s ease;
+    min-width: auto;
+    text-align: center;
+  }
+  button.btn:hover {
+    background: #403d39;
+    color: #e7e3d9;
+  }
+
+  /* Scrollbar for notes */
+  #notes::-webkit-scrollbar {
+    width: 8px;
+  }
+  #notes::-webkit-scrollbar-track {
+    background: #f5f4f1;
+  }
+  #notes::-webkit-scrollbar-thumb {
+    background-color: #cfc8ba;
+    border-radius: 4px;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 900px) {
+    main {
+      flex-direction: column;
+      padding: 20px 16px 40px;
+      height: auto;
+    }
+    .input-area {
+      width: 100%;
+      min-height: auto;
+      margin-bottom: 28px;
+      flex: none;
+    }
+    #notes {
+      max-height: none;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      padding: 0 6px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<main>
+  <section class="input-area" aria-label="Add new note">
+    <h2>HEAD</h2>
+    <input
+      type="search"
+      id="search"
+      placeholder="Search notes..."
+      oninput="searchNotes()"
+      autocomplete="off"
+      aria-label="Search notes"
+    />
+    <textarea
+      id="note"
+      placeholder="Write your note here... Use **bold** and ==highlight=="
+      aria-multiline="true"
+    ></textarea>
+    <input type="file" id="image" accept="image/*" aria-label="Upload image" />
+    <button id="save-note" onclick="saveNote()">Save Note</button>
+  </section>
+
+  <section id="notes" aria-live="polite" aria-label="Notes list"></section>
+</main>
+
+</body>
+</html>
