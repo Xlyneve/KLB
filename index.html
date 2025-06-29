@@ -340,11 +340,10 @@ button.section-btn:hover {
       background-color: var(--btn-hover);
     }
 
-  @media (max-width: 768px) {
-  /* Show sidebar full width on small screens */
+@media (max-width: 768px) {
   .sidebar {
     width: 100%;
-    height: 320px; /* Adjust height as needed */
+    height: 450px;  /* increased height for better visibility */
     overflow-y: auto;
     position: relative;
     box-shadow: none;
@@ -352,6 +351,12 @@ button.section-btn:hover {
     padding: 12px;
   }
 
+  .todo-section {
+    min-height: 250px;  /* make to-do list taller */
+    overflow-y: auto;   /* scroll inside todo section if content overflows */
+  }
+
+  /* rest of your styles */
   .main-content {
     padding: 16px;
     width: 100%;
@@ -389,13 +394,6 @@ button.section-btn:hover {
   }
 }
 
-/* Allow full scrolling on small devices */
-html, body {
-  height: auto;
-  max-height: none;
-  overflow: auto;
-  }
- }
 
   </style>
 </head>
