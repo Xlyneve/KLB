@@ -133,6 +133,86 @@
       border-radius: 6px;
       cursor: pointer;
     }
+	@media (max-width: 480px) {
+  body {
+    height: auto;
+    overflow: auto;
+  }
+
+  main {
+    flex-direction: column;
+    padding: 16px;
+    gap: 16px;
+    height: auto;
+  }
+
+  .input-area {
+    width: 100%;
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .input-area h2 {
+    font-size: 1.4rem;
+  }
+
+  #search,
+  #note,
+  input[type="file"] {
+    font-size: 13px;
+    padding: 10px;
+  }
+
+  #note {
+    min-height: 200px;
+  }
+
+  button#save-note {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+    border-radius: 20px;
+  }
+
+  #notes {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  article.note-card {
+    padding: 14px;
+    font-size: 14px;
+  }
+
+  .note-image.zoomed {
+    max-width: 95vw;
+    max-height: 85vh;
+  }
+
+  .card-controls {
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-start;
+  }
+
+  .btn {
+    font-size: 13px;
+    padding: 6px 12px;
+    flex: 1 1 auto;
+  }
+
+  .edit-toolbar button {
+    font-size: 13px;
+    padding: 4px 6px;
+  }
+
+  .edit-textarea {
+    font-size: 14px;
+    padding: 10px;
+    min-height: 160px;
+  }
+}
+
   </style>
 </head>
 <body>
