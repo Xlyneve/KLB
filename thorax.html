@@ -294,7 +294,71 @@
       .input-area {
         width: 100%;
       }
-    }
+    @media (max-width: 480px) {
+  body {
+    height: auto;
+    overflow: auto;
+  }
+
+  main {
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+    height: auto;
+  }
+
+  .input-area {
+    width: 100%;
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  #search {
+    font-size: 14px;
+    padding: 10px;
+  }
+
+  #note {
+    min-height: 220px;
+    font-size: 14px;
+    padding: 12px;
+  }
+
+  #image {
+    font-size: 13px;
+    padding: 8px 10px;
+  }
+
+  .btn {
+    font-size: 13px;
+    padding: 8px 12px;
+    width: 100%;
+  }
+
+  #notes {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    max-height: none;
+  }
+
+  .note-card {
+    padding: 14px;
+    font-size: 14px;
+  }
+
+  .note-image.zoomed {
+    max-width: 95vw;
+    max-height: 85vh;
+  }
+
+  .card-controls {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+}
+
+	
   </style>
 </head>
 <body>
