@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Notes</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f7f6f4;
+      font-family: Tahoma, sans-serif;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    header {
+      background: #d3c7b7;
+      padding: 12px 24px;
+      font-size: 20px;
+      font-weight: bold;
+      text-align: center;
+      color: #4e463d;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .input-section {
+      max-width: 400px;
+      padding: 18px;
+      border-right: 1px solid #ccc;
+      background: #fff;
+      overflow-y: auto;
+      min-width: 280px;
+    }
+
+    textarea, input[type="file"], input[type="search"] {
+      width: 100%;
+      font-family: Tahoma, sans-serif;
+      font-size: 12px;
+      padding: 10px;
+      margin-bottom: 12px;
+      border: 1px solid #aaa;
+      border-radius: 8px;
+      background: #fffefc;
+      resize: vertical;
+    }
+
+    button {
+      font-family: Tahoma, sans-serif;
+      padding: 8px 16px;
+      border: none;
+      background: #c3b4a3;
+      border-radius: 12px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .notes-container {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+    }
+
+    .note-card {
+      background: #fff;
+      padding: 12px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      word-wrap: break-word;
+    }
+
+    .note-card p {
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 0;
+    }
+
+    .note-card img {
+      width: 100%;
+      margin-top: 8px;
+      border-radius: 6px;
+    }
+
+    .note-controls {
+      margin-top: 10px;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .note-controls button {
+      font-size: 11px;
+      padding: 4px 10px;
+    }
+
+    @media (max-width: 700px) {
+      main {
+        flex-direction: column;
+      }
+
+      .input-section {
+        border-right: none;
+        border-bottom: 1px solid #ccc;
+      }
+
+      .notes-container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>🗂️ Notes</header>
+  <main>
+    <section class="input-section">
+      <input type="search" id="search" placeholder="Search notes..." oninput="searchNotes()" />
+      <textarea id="note" rows="10" placeholder="Write your note... Use **bold** and ==highlight=="></textarea>
+      <input type="file" id="image" accept="image/*" />
+      <button onclick="saveNote()">Save Note</button>
+    </section>
+    <div class="notes-container" id="notes"></div>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import {
+      getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc
+    } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAwITicGVF5_Vxw6Bwf9n1AaQom-76M2IE",
+      authDomain: "krissa-d5a9c.firebaseapp.com",
+      projectId: "krissa-d5a9c",
+      storageBucket: "krissa-d5a9c.appspot.com",
+      messagingSenderId: "550249186610",
+      appId: "1:550249186610:web:5ee5b585ac686021be432b"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const notesCollection = collection(db, "notes");
+
+    function formatNote(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\n/g, "<br>")
+        .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+        .replace(/==(.+?)==/g, '<span style="background-color:#fceabb">$1</span>');
+    }
+
+    async function saveNote() {
+      let noteText = document.getElementById("note").value.trim();
+      const imageFile = document.getElementById("image").files[0];
+      if (!noteText && !imageFile) return;
+
+      noteText = formatNote(noteText);
+      let imageData = "";
+
+      if (imageFile) {
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          imageData = reader.result;
+          await addDoc(notesCollection, { note: noteText, image: imageData });
+          document.getElementById("note").value = "";
+          document.getElementById("image").value = "";
+          loadNotes();
+        };
+        reader.readAsDataURL(imageFile);
+      } else {
+        await addDoc(notesCollection, { note: noteText, image: "" });
+        document.getElementById("note").value = "";
+        loadNotes();
+      }
+    }
+
+    async function loadNotes(filter = "") {
+      const notesContainer = document.getElementById("notes");
+      notesContainer.innerHTML = "";
+      const querySnapshot = await getDocs(notesCollection);
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (filter && !data.note?.toLowerCase().includes(filter.toLowerCase())) return;
+
+        const card = document.createElement("div");
+        card.className = "note-card";
+
+        const p = document.createElement("p");
+        p.innerHTML = data.note || "";
+        card.appendChild(p);
+
+        if (data.image) {
+          const img = document.createElement("img");
+          img.src = data.image;
+          card.appendChild(img);
+        }
+
+        const controls = document.createElement("div");
+        controls.className = "note-controls";
+
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "Edit";
+        editBtn.onclick = () => {
+          if (p.contentEditable === "false") {
+            p.contentEditable = "true";
+            p.focus();
+            editBtn.textContent = "Save";
+          } else {
+            updateDoc(doc(notesCollection, docSnap.id), { note: p.innerHTML }).then(() => {
+              p.contentEditable = "false";
+              editBtn.textContent = "Edit";
+            });
+          }
+        };
+        controls.appendChild(editBtn);
+
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "Delete";
+        delBtn.onclick = async () => {
+          await deleteDoc(doc(notesCollection, docSnap.id));
+          loadNotes(filter);
+        };
+        controls.appendChild(delBtn);
+
+        card.appendChild(controls);
+        notesContainer.appendChild(card);
+      });
+    }
+
+    window.saveNote = saveNote;
+    window.loadNotes = loadNotes;
+    window.searchNotes = () => {
+      const searchVal = document.getElementById("search").value;
+      loadNotes(searchVal);
+    };
+
+    window.onload = () => loadNotes();
+  </script>
+</body>
+</html>

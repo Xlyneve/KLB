@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Enter Password</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f5f4f1;
+      color: #484542;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+    body {
+      flex-direction: column;
+    }
+    #datetime {
+      text-align: center;
+      font-size: 26px;
+      margin-bottom: 20px;
+      user-select: none;
+      line-height: 1.3;
+      color: #726e68;
+    }
+    #date-part {
+      font-weight: bold;
+      font-size: 22px;
+    }
+    #time-part {
+      font-size: 20px;
+      margin-top: 4px;
+    }
+    .password-container {
+      background: #fffefa;
+      border-radius: 20px;
+      padding: 30px 36px;
+      box-shadow: 0 4px 12px rgb(172 165 152 / 0.15);
+      width: 320px;
+      text-align: center;
+    }
+    .password-container h2 {
+      margin: 0 0 12px 0;
+      font-weight: 700;
+      color: #5a5853;
+    }
+    input[type="password"] {
+      font-family: Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 14px;
+      padding: 12px 14px;
+      width: 100%;
+      border-radius: 14px;
+      border: 1.5px solid #d4cec7;
+      box-sizing: border-box;
+      margin-bottom: 16px;
+      transition: border-color 0.3s ease;
+      outline-offset: 0;
+    }
+    input[type="password"]:focus {
+      border-color: #a3a09a;
+      outline: none;
+      background: #fff;
+    }
+    button {
+      width: 100%;
+      background: #cdc5b7;
+      border: none;
+      border-radius: 32px;
+      padding: 12px 0;
+      font-weight: 600;
+      font-size: 16px;
+      color: #5a5853;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgb(205 197 183 / 0.5);
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+    button:hover {
+      background: #b0a895;
+      color: #403d39;
+    }
+  </style>
+</head>
+<body>
+  <div id="datetime" aria-live="polite">
+    <div id="date-part"></div>
+    <div id="time-part"></div>
+  </div>
+
+  <div class="password-container" role="form" aria-label="Password login form">
+    <h2>Enter Password</h2>
+    <input
+      type="password"
+      id="password"
+      placeholder="Password"
+      aria-label="Password"
+      autocomplete="current-password"
+    />
+    <button onclick="checkPassword()">Submit</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+    // Your corrected krissa-d5a9c Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAwITicGVF5_Vxw6Bwf9n1AaQom-76M2IE",
+      authDomain: "krissa-d5a9c.firebaseapp.com",
+      projectId: "krissa-d5a9c",
+      storageBucket: "krissa-d5a9c.appspot.com",
+      messagingSenderId: "550249186610",
+      appId: "1:550249186610:web:5ee5b585ac686021be432b",
+      measurementId: "G-D7KBRWFETT"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Live date/time update
+    function updateDateTime() {
+      const now = new Date();
+      const dateStr = now.toLocaleDateString(undefined, {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      const timeStr = now.toLocaleTimeString();
+
+      document.getElementById('date-part').textContent = dateStr;
+      document.getElementById('time-part').textContent = timeStr;
+    }
+    setInterval(updateDateTime, 1000);
+    updateDateTime();
+
+    async function checkPassword() {
+      const inputPassword = document.getElementById('password').value.trim();
+      if (!inputPassword) {
+        alert("Please enter the password.");
+        return;
+      }
+      try {
+        const docRef = doc(db, "settings", "password");
+        const docSnap = await getDoc(docRef);
+        if (!docSnap.exists()) {
+          alert("Password setting not found.");
+          return;
+        }
+        const correctPassword = docSnap.data().value;
+        if (inputPassword === correctPassword) {
+          sessionStorage.setItem('authenticated', 'true');
+          window.location.href = "home.html";
+        } else {
+          alert("Incorrect password. Try again.");
+        }
+      } catch (error) {
+        console.error("Error checking password:", error);
+        alert("Something went wrong. Please try again later.");
+      }
+    }
+
+    // Allow Enter key to submit
+    document.getElementById("password").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        checkPassword();
+      }
+    });
+  </script>
+</body>
+</html>
