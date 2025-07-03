@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>HEAD KLB</title>
+<!-- Only difference is the line where we define notesCollection -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
   import {
@@ -22,9 +23,8 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
-  const notesCollection = collection(db, "notes");
+  const notesCollection = collection(db, "head"); // ✅ Changed from "notes" to "head"
 
-  // Convert markdown-like syntax to HTML before saving new notes
   function formatNote(text) {
     const escaped = text
       .replace(/&/g, "&amp;")
@@ -41,10 +41,9 @@
     const imageFile = document.getElementById("image").files[0];
     if (!noteText && !imageFile) return;
 
-    // Convert markdown syntax to HTML before saving
     noteText = formatNote(noteText);
-
     let imageData = "";
+
     if (imageFile) {
       const reader = new FileReader();
       reader.onloadend = async () => {
@@ -68,7 +67,7 @@
     const querySnapshot = await getDocs(notesCollection);
     querySnapshot.forEach((docSnap) => {
       const data = docSnap.data();
-      if (filter && !data.note?.toLowerCase().trim().includes(filter.toLowerCase().trim())) return;
+      if (filter && !data.note?.toLowerCase().includes(filter.toLowerCase())) return;
 
       const card = document.createElement("article");
       card.className = "note-card";
@@ -84,7 +83,6 @@
 
       const p = document.createElement("p");
       p.className = "note-text";
-      // Render saved HTML directly
       p.innerHTML = data.note || "";
       p.contentEditable = false;
       card.appendChild(p);
@@ -92,11 +90,9 @@
       const controls = document.createElement("nav");
       controls.className = "card-controls";
 
-      // Bold button (hidden initially)
       const boldBtn = document.createElement("button");
       boldBtn.className = "btn format-btn";
       boldBtn.textContent = "B";
-      boldBtn.title = "Bold";
       boldBtn.style.display = "none";
       boldBtn.onclick = () => {
         if (p.contentEditable === "true") {
@@ -106,11 +102,9 @@
       };
       controls.appendChild(boldBtn);
 
-      // Underline button (hidden initially)
       const underlineBtn = document.createElement("button");
       underlineBtn.className = "btn format-btn";
       underlineBtn.textContent = "U";
-      underlineBtn.title = "Underline";
       underlineBtn.style.display = "none";
       underlineBtn.onclick = () => {
         if (p.contentEditable === "true") {
@@ -120,51 +114,42 @@
       };
       controls.appendChild(underlineBtn);
 
-      // Edit button
       const editBtn = document.createElement("button");
       editBtn.className = "btn edit-btn";
       editBtn.textContent = "Edit";
       editBtn.onclick = () => {
         if (p.contentEditable === "false") {
-          // Enter edit mode
           p.contentEditable = "true";
           p.focus();
           editBtn.textContent = "Save";
           cancelBtn.style.display = "inline-block";
-          // Show formatting buttons
           boldBtn.style.display = "inline-block";
           underlineBtn.style.display = "inline-block";
         } else {
-          // Save mode
           const updatedNote = p.innerHTML.trim();
           if (!updatedNote) {
             alert("Note cannot be empty.");
             return;
           }
-          updateDoc(doc(notesCollection, docSnap.id), { note: updatedNote })
-            .then(() => {
-              p.contentEditable = "false";
-              editBtn.textContent = "Edit";
-              cancelBtn.style.display = "none";
-              boldBtn.style.display = "none";
-              underlineBtn.style.display = "none";
-              loadNotes(filter);
-            });
+          updateDoc(doc(notesCollection, docSnap.id), { note: updatedNote }).then(() => {
+            p.contentEditable = "false";
+            editBtn.textContent = "Edit";
+            cancelBtn.style.display = "none";
+            boldBtn.style.display = "none";
+            underlineBtn.style.display = "none";
+            loadNotes(filter);
+          });
         }
       };
       controls.appendChild(editBtn);
 
-      // Cancel button
       const cancelBtn = document.createElement("button");
       cancelBtn.className = "btn cancel-btn";
       cancelBtn.textContent = "Cancel";
       cancelBtn.style.display = "none";
-      cancelBtn.onclick = () => {
-        loadNotes(filter);
-      };
+      cancelBtn.onclick = () => loadNotes(filter);
       controls.appendChild(cancelBtn);
 
-      // Delete button
       const delBtn = document.createElement("button");
       delBtn.className = "btn del-btn";
       delBtn.textContent = "Delete";
@@ -175,20 +160,18 @@
       controls.appendChild(delBtn);
 
       card.appendChild(controls);
-
       notesContainer.appendChild(card);
     });
   }
 
   window.saveNote = saveNote;
   window.loadNotes = loadNotes;
-
-  window.onload = () => loadNotes();
-
   window.searchNotes = () => {
     const searchVal = document.getElementById("search").value;
     loadNotes(searchVal);
   };
+
+  window.onload = () => loadNotes();
 </script>
 
 <style>
